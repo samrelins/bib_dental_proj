@@ -11,6 +11,9 @@ def build_epi_ga_data(data_dir):
     ga_data_path = os.path.join(data_dir, "ga_data.csv")
     ga_data = pd.read_csv(ga_data_path)
 
+    epi_data_path = os.path.join(data_dir, "epi_data.csv")
+    epi_data = pd.read_csv(epi_data_path)
+
     # add nan values in place of blank string
     ga_data.replace([" "], np.nan, inplace=True)
 
@@ -33,7 +36,6 @@ def build_epi_ga_data(data_dir):
         "Extracted" : "exodontia",
         "Filled" : "comprehensive_care"
     }
-
     ga_data["dgaGAType"] = ga_data.dgaGAType.map(correct_type_vals)
 
     # read in merged data
@@ -54,6 +56,12 @@ def build_epi_ga_data(data_dir):
     }
     merge_data["dgaGAType"] = merge_data.dgaGAType.astype("float")
     merge_data["dgaGAType"] = merge_data.dgaGAType.map(type_keys_to_vals)
+
+    # fill na cols for tooth level treatments with "Nil treatment"
+    tooth_cols = [col for col in merge_data.columns
+                  if col[:4] in ["dgaU", "dgaL"]]
+    for col in tooth_cols:
+        merge_data[col] = merge_data[col].fillna("Nil treatment")
 
     # merge AgeMths col from GA data into merged data
     merge_data.drop("AgeMths", axis=1, inplace=True)
@@ -92,5 +100,81 @@ def build_epi_ga_data(data_dir):
     )
     merge_data.drop("res6mcbetterstart_ga", axis=1, inplace=True)
 
-    return merge_data
+    # correct Totalnoextractions
+    extractions_sum = (
+            merge_data.totalnumberofprimaryextractions +
+            merge_data.totalnumberofpermanentextractions
+    )
+    merge_data["Totalnoextractions"] = extractions_sum
+
+    # split ga and epi into separate dataframes and rename features
+    merge_cols = [col for col in merge_data.columns
+                  if col not in ga_data.columns
+                  and col not in epi_data.columns]
+
+    is_epi = merge_data.Epi == 1
+    is_ga = ~merge_data.AgeMths.isna()
+
+    ga_data_final = merge_data[is_ga][list(ga_data.columns) + merge_cols]
+    epi_data_final = merge_data[is_epi][list(epi_data.columns) + merge_cols]
+
+    rename_cols = {
+        'admincgender': 'gender',
+        'agefm_fbqall': 'father_age_at_q',
+        'agemm_mbqall': 'mother_age_at_q',
+        'ben0mentst': 'on_benefits',
+        'bib6a02': 'describe_health_q',
+        'bib6b04': 'has_diagnosis_q',
+        'bib6b05': 'hospital_admission_q',
+        'deminfeth3gpcomb': 'ethnicity',
+        'edcont_eal': 'english_additional_lang',
+        'edcont_lac': 'looked_after_child',
+        'edcont_sen': 'special_ed_needs',
+        'edu0fthede': 'father_highest_ed',
+        'edu0mumede': 'mother_highest_ed',
+        'eth0eth9gp': 'mother_ethnicity',
+        'fbqageeduc': 'age_father_complete_ed',
+        'fbqcountrybirth': 'father_birthplace',
+        'imd_2010_decile_nat': 'imd_2010_decile',
+        'mbqlcasep5gp': 'socio_economic_pos',
+        'org0agemuk': 'age_mother_moved_uk',
+        'org0mmubct': 'mother_birthplace',
+        'qad0langua': 'questionaire_language',
+        'Totalnoextractions': 'n_extractions',
+        'totalnumberofprimaryextractions': 'n_primary_extract',
+        'totalnumberofpermanentextractions': 'n_perm_extract',
+        'AgeMths': 'age_at_ga',
+        'ddsdt': 'decayed_teeth',
+        'ddsmt': 'missing_teeth',
+        'ddsft': 'filled_teeth',
+        'ddsdmft': 'dmft',
+        'dgaGAType': 'type_of_ga',
+        'dgaGATotal': 'total_ga',
+        'dgaGASequence': 'ga_sequence',
+        'dgaWeight': 'weight_at_ga',
+        'dgaUR6': 'ur6', 'dgaURE': 'urE', 'dgaURD': 'urd', 'dgaURC': 'urc',
+        'dgaURB': 'urb', 'dgaURA': 'ura', 'dgaULA': 'ula', 'dgaULB': 'ulb',
+        'dgaULC': 'ulc', 'dgaULD': 'uld', 'dgaULE': 'ule', 'dgaUL6': 'ul6',
+        'dgaLL6': 'll6', 'dgaLLE': 'lle', 'dgaLLD': 'lld', 'dgaLLC': 'llc',
+        'dgaLLB': 'llb', 'dgaLLA': 'lla', 'dgaLRA': 'lra', 'dgaLRB': 'lrb',
+        'dgaLRC': 'lrc', 'dgaLRD': 'lrd', 'dgaLRE': 'lre', 'dgaLR6': 'lr6',
+        'dgaUR4': 'ur4', 'dgaUR1': 'ur1', 'dgaUL1': 'ul1', 'dgaUL4': 'ul4',
+        'dgaLL5': 'll5', 'dgaLL4': 'll4', 'dgaLL1': 'll1', 'dgaLR1': 'lr1',
+        'dgaLR4': 'lr4', 'dgaLR5': 'lr5'
+    }
+
+    epi_data_final.rename(rename_cols, axis=1, inplace=True)
+    ga_data_final.rename(rename_cols, axis=1, inplace=True)
+
+    # add features that total each treatment type (extracted already there)
+    tooth_cols = [col for col in ga_data_final.columns
+                  if len(col) == 3 and col != "Epi"]
+    treatments = ["Filled", "Sealed", "Capped", "Crowned"]
+    for treatment in treatments:
+        treatment_name = "n_" + treatment.lower()
+        ga_data_final[treatment_name] = np.zeros(len(ga_data_final))
+        for col in tooth_cols:
+            ga_data_final[treatment_name] += ga_data_final[col] == treatment
+
+    return ga_data_final, epi_data_final
 
