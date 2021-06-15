@@ -4,8 +4,7 @@ import pandas as pd
 import numpy as np
 import os
 
-
-def build_epi_ga_data(data_dir):
+def build_epi_ga_data(data_dir, include_ids=False):
 
     # read in GA data
     ga_data_path = os.path.join(data_dir, "ga_data.csv")
@@ -169,12 +168,56 @@ def build_epi_ga_data(data_dir):
     # add features that total each treatment type (extracted already there)
     tooth_cols = [col for col in ga_data_final.columns
                   if len(col) == 3 and col != "Epi"]
-    treatments = ["Filled", "Sealed", "Capped", "Crowned"]
+    treatments = ["Filled", "Sealed", "Crowned"]
+    ga_data_final["n_treated"] = np.zeros(len(ga_data_final))
     for treatment in treatments:
         treatment_name = "n_" + treatment.lower()
         ga_data_final[treatment_name] = np.zeros(len(ga_data_final))
         for col in tooth_cols:
             ga_data_final[treatment_name] += ga_data_final[col] == treatment
+        ga_data_final["n_treated"] += ga_data_final[treatment_name]
+
+    # change any non Pakistani / British categories to "other"
+    ethnicity_cols = ['ethnicity', 'mother_ethnicity', 'father_birthplace',
+                       'mother_birthplace', 'questionaire_language']
+    england_pakistan_syn = [ "England", "Pakistan", "White British",
+                             "Pakistani", "United Kingdom", "English"]
+
+    for col in ethnicity_cols:
+        cat_map = {val: "Other" if val not in england_pakistan_syn else val
+                   for val in ga_data_final[col]}
+        na_map = ga_data_final[col].isna()
+        ga_data_final.loc[~na_map, col] = (ga_data_final
+                                           .loc[~na_map, col]
+                                           .map(cat_map))
+
+    # drop unnecessary columns
+    id_cols = ["ChildID", "PregnancyID", "MotherID", "FatherID"]
+    if not include_ids:
+        ga_data_final.drop(id_cols, axis=1, inplace=True)
+        epi_data_final.drop(id_cols, axis=1, inplace=True)
+
 
     return ga_data_final, epi_data_final
+
+
+def generate_tooth_level_data(df):
+    tooth_cols = [col for col in df.columns
+                  if len(col) == 3 and col != "Epi"]
+    treatments = ["Extracted", "Filled", "Sealed", "Crowned"]
+    treatments_by_tooth = []
+
+    for tooth in tooth_cols:
+        tooth_data = {"tooth": tooth.upper()}
+        for treatment in treatments:
+            tooth_data[treatment] = sum(df[tooth] == treatment)
+        treatments_by_tooth.append(tooth_data)
+
+    tooth_df = pd.DataFrame(treatments_by_tooth)
+    tooth_df["treatment_count"] = tooth_df.iloc[:,1:].sum(axis=1)
+    tooth_df.sort_values("treatment_count",
+                         inplace=True,
+                         ascending=False)
+    return tooth_df
+
 
