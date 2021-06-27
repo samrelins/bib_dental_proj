@@ -28,12 +28,44 @@ def clean_context_data(df):
     return df
 
 
+def convert_ethnicity_categories(df):
+    df = df.copy()
+
+    ethnicity_name = ("ethnicity" if "ethnicity" in df.columns
+                      else "edcont_ethnic_origin")
+
+    if df[ethnicity_name].dtype != np.dtype("int16"):
+        raise ValueError("Categories must be numeric to convert")
+
+    df[ethnicity_name] = df[ethnicity_name].apply(
+        lambda x: x if x in [3, 8] else 10
+    ).astype("int16")
+    return df
+
+
+def convert_sen_categories(df):
+
+    df = df.copy()
+
+    sen_name = "sen" if "sen" in df.columns else "edcont_sen"
+
+    if df[sen_name].dtype != np.dtype("int16"):
+        raise ValueError("Categories must be numeric to convert")
+
+    df[sen_name] = df[sen_name].apply(
+        lambda x: x if x == 2 else 3
+    ).astype("int16")
+
+    return df
+
+
 def convert_context_numerical_categories(df):
 
     df = df.copy()
 
     # convert academicyear to full year
-    df["edcont_academicyear"] = df.edcont_academicyear + 2010
+    df["edcont_academicyear"] = ((df.edcont_academicyear + 2010)
+                                 .astype("category"))
 
     category_to_map_dict = {}
     # convert term of birth
@@ -161,7 +193,7 @@ def prep_context_ga_data(data_dir):
     ga_df = ga_df.pipe(clean_ga_data)
 
     education_data_dir = os.path.join(data_dir, "bib_data/education")
-    context_path = os.path.join(education_data_dir, "edrecs_context/data.csv")
+    context_path = os.path.join(education_data_dir, "context/data.csv")
     context_df = pd.read_csv(context_path)
     context_df = context_df.pipe(clean_context_data)
 
