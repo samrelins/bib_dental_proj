@@ -69,6 +69,11 @@ def clean_context_data(df):
                  'has_edcont']
     df.drop(drop_cols, axis=1, inplace=True)
 
+    rename_cols = {'edcont_academicyear': "year_started_school",
+                   'edcont_eal': "eal",
+                   'edcont_ethnic_origin': "ethnicity"}
+    df.rename(rename_cols, axis=1, inplace=True)
+
     return df
 
 
@@ -78,7 +83,7 @@ def clean_phonics_data(df):
 
     # create "other" category in which to lump all pass / non-pass results incl. nas
     df["phonics_grade1"] = df.phonics_grade1.apply(
-        lambda x: 3 if x not in [1, 2] else x
+        lambda x: "expected" if x == 1 else "below_or_missing"
     ).astype("category")
 
     # fill mark nas with zero
@@ -101,10 +106,10 @@ def clean_phonics_data(df):
     return df
 
 
-def clean_and_merge_ks1_data(education_dir):
+def clean_and_merge_ks1_data(bib_dir):
 
     # load pre 2016 ks1 data and drop unnecessary columns
-    ks1_pre_2016_path = os.path.join(education_dir, "ks1_pre_2016/data.csv")
+    ks1_pre_2016_path = os.path.join(bib_dir, "education/ks1_pre_2016/data.csv")
     ks1_pre_2016_data = pd.read_csv(ks1_pre_2016_path)
     drop_cols_pre_2016 = ["has_edrecs_ks1_1", "has_edks11",
                           "ks1_pre2016_testestablishment", "ks1_pre2016_english",
@@ -112,7 +117,7 @@ def clean_and_merge_ks1_data(education_dir):
     ks1_pre_2016_data.drop(drop_cols_pre_2016, axis=1, inplace=True)
 
     # load post 2016 ks1 data and drop unnecessary columns
-    ks1_post_2016_path = os.path.join(education_dir, "ks1_post_2016/data.csv")
+    ks1_post_2016_path = os.path.join(bib_dir, "education/ks1_post_2016/data.csv")
     ks1_post_2016_data = pd.read_csv(ks1_post_2016_path)
     drop_cols_post_2016 = ["has_edrecs_ks1_2", "has_edks12",
                            "ks1_post2016_testestablishment",
@@ -188,46 +193,57 @@ def clean_eyfsp_data(df):
                    .map(eyfsp_codes)
                    .astype("category"))
 
+    rename_cols = {
+        'eyfsp_post2013_com_elg01': "com_listening_attention",
+        'eyfsp_post2013_com_elg02': "com_understanding",
+        'eyfsp_post2013_com_elg03': "com_speaking",
+        'eyfsp_post2013_phy_elg04': "phy_moving_handling",
+        'eyfsp_post2013_phy_elg05': "phy_health_self_care",
+        'eyfsp_post2013_pse_elg06': "pse_self_confidence_awareness",
+        'eyfsp_post2013_pse_elg07': "pse_managing_feelings_behaviour",
+        'eyfsp_post2013_pse_elg08': "pse_making_relationships",
+        'eyfsp_post2013_lit_elg09': "lit_reading",
+        'eyfsp_post2013_lit_elg10': "lit_writing",
+        'eyfsp_post2013_mat_elg11': "mat_numbers",
+        'eyfsp_post2013_mat_elg12': "mat_shapes_space_measures",
+        'eyfsp_post2013_utw_elg13': "utw_people_communities",
+        'eyfsp_post2013_utw_elg14': "utw_the_world",
+        'eyfsp_post2013_utw_elg15': "utw_technology",
+        'eyfsp_post2013_exp_elg16': "exp_using_media_materials",
+        'eyfsp_post2013_exp_elg17': "exp_being_imaginative"}
+
+    df.rename(rename_cols, axis=1, inplace=True)
+
     return df
 
 
 def rename_context_cols(df):
 
     df = df.copy()
-    rename_cols = {'edcont_academicyear': "year_started_school",
-                   'edcont_actermbirth': "birthday_academic_term",
-                   'edcont_eal': "eal",
-                   'edcont_ethnic_origin': "ethnicity",
-                   'edcont_fsm': "fsm",
-                   'edcont_g_t': "gifted",
-                   'edcont_gender': "gender",
-                   'edcont_lac': "looked_after",
-                   'edcont_sen': "sen"}
 
     df = df.rename(rename_cols, axis=1)
 
     return df
 
 
-def return_merged_edrecs_df(education_dir):
-
+def return_merged_edrecs_df(bib_dir):
     # load eyfsp data
-    eyfsp_path = os.path.join(education_dir, "eyfsp_post_2013/data.csv")
+    eyfsp_path = os.path.join(bib_dir, "education/eyfsp_post_2013/data.csv")
     eyfsp_data = pd.read_csv(eyfsp_path)
     eyfsp_data = eyfsp_data.pipe(clean_eyfsp_data)
 
     # load context data
-    context_path = os.path.join(education_dir, "context/data.csv")
+    context_path = os.path.join(bib_dir, "education/context/data.csv")
     context_data = pd.read_csv(context_path)
     context_data = context_data.pipe(clean_context_data)
 
     # load phonics data
-    phonics_path = os.path.join(education_dir, "y1_phonics/data.csv")
+    phonics_path = os.path.join(bib_dir, "education/y1_phonics/data.csv")
     phonics_data = pd.read_csv(phonics_path)
     phonics_data = phonics_data.pipe(clean_phonics_data)
 
     # load ks1 data
-    ks1_data = clean_and_merge_ks1_data(education_dir)
+    ks1_data = clean_and_merge_ks1_data(bib_dir)
 
     # merge individual edrecs dataframes together
     dfs_to_merge = [context_data, phonics_data, ks1_data]
@@ -237,5 +253,29 @@ def return_merged_edrecs_df(education_dir):
 
     return edrecs_data
 
+
+def return_merged_edrecs_ga_df(bib_dir, drop_comp_care_cases=False):
+    edrecs_data = return_merged_edrecs_df(bib_dir)
+
+    ga_path = os.path.join(bib_dir, "dental/dental_ga/data.csv")
+    ga_data = pd.read_csv(ga_path)
+
+    if drop_comp_care_cases:
+        ga_data = (ga_data
+                   .pipe(clean_ga_data)
+                   .pipe(add_counts_of_treatments))
+        comp_care_cases = ga_data.n_treated > 0
+        ga_data = ga_data[~comp_care_cases][["entity_id", "has_dental_ga"]]
+    else:
+        ga_data = ga_data.pipe(clean_ga_data)[["entity_id", "has_dental_ga"]]
+
+    ga_data.drop_duplicates(subset=["entity_id"], inplace=True)
+
+    edrecs_ga_data = edrecs_data.merge(ga_data,
+                                       on="entity_id",
+                                       how="left")
+    edrecs_ga_data["has_dental_ga"] = edrecs_ga_data.has_dental_ga.fillna(0)
+
+    return edrecs_ga_data
 
 

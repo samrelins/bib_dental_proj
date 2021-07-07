@@ -132,3 +132,36 @@ def add_counts_of_treatments(df):
                          " treatment counts")
 
     return df
+
+
+def generate_tooth_level_data(df):
+    
+    # define tooth data and different treatment categories
+    tooth_cols = [col for col in df.columns
+                  if col[0] in ["u", "l"]]
+                
+    treatments = ["extracted", "filled", "sealed", "crowned"]
+    
+    # count up the different treatments by tooth and store in dict
+    treatments_by_tooth = []
+    for tooth in tooth_cols:
+        tooth_data = {"tooth": tooth.upper()}
+        for treatment in treatments:
+            tooth_data["n_" + treatment.lower()] = sum(df[tooth] == treatment)
+        treatments_by_tooth.append(tooth_data)
+
+    # convert tooth dict to dataframe
+    tooth_df = pd.DataFrame(treatments_by_tooth)
+    
+    # add total treatment count and order dataframe by most - least treated
+    treatments = ["n_extracted", "n_filled", "n_sealed", "n_crowned"]
+    tooth_df["n_treated"] = tooth_df[treatments].sum(axis=1)
+    tooth_df.sort_values("n_treated",
+                         inplace=True,
+                         ascending=False)
+    
+    # add non extraction treatment feature
+    non_extractions = ["n_sealed", "n_filled", "n_crowned"]
+    tooth_df["n_non_extractions"] = tooth_df[non_extractions].sum(axis=1)
+    
+    return tooth_df
