@@ -10,11 +10,7 @@ def clean_context_data(df):
 
     df = df.copy()
 
-    # convert academicyear to categories named with full year
-    df["edcont_academicyear"] = ((df.edcont_academicyear + 2010)
-                                 .astype("category"))
-
-    # convert missing eal to "unknown" and name categories
+    # convert missing eal to "unknown", then name categories
     df["edcont_eal"] = df.edcont_eal.fillna(2)
     eal_codes = {
         1: "no",
@@ -64,13 +60,12 @@ def clean_context_data(df):
     )
 
     # remove unneeded cols
-    drop_cols = ['has_edrecs_context', 'edcont_actermbirth', 'edcont_fsm',
-                 'edcont_g_t', 'edcont_gender', 'edcont_lac', 'edcont_sen',
-                 'has_edcont']
+    drop_cols = ['has_edrecs_context', 'edcont_actermbirth',
+                 "edcont_academicyear", 'edcont_fsm', 'edcont_g_t',
+                 'edcont_gender', 'edcont_lac', 'edcont_sen', 'has_edcont']
     df.drop(drop_cols, axis=1, inplace=True)
 
-    rename_cols = {'edcont_academicyear': "year_started_school",
-                   'edcont_eal': "eal",
+    rename_cols = {'edcont_eal': "eal",
                    'edcont_ethnic_origin': "ethnicity"}
     df.rename(rename_cols, axis=1, inplace=True)
 
@@ -249,7 +244,7 @@ def return_merged_edrecs_df(bib_dir):
     dfs_to_merge = [context_data, phonics_data, ks1_data]
     edrecs_data = eyfsp_data.copy()
     for df in dfs_to_merge:
-        edrecs_data = edrecs_data.merge(df, on="entity_id", how="inner")
+        edrecs_data = edrecs_data.merge(df, on="entity_id", how="outer")
 
     return edrecs_data
 
@@ -273,7 +268,7 @@ def return_merged_edrecs_ga_df(bib_dir, drop_comp_care_cases=False):
 
     edrecs_ga_data = edrecs_data.merge(ga_data,
                                        on="entity_id",
-                                       how="left")
+                                       how="outer")
     edrecs_ga_data["has_dental_ga"] = edrecs_ga_data.has_dental_ga.fillna(0)
 
     return edrecs_ga_data

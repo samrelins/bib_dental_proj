@@ -7,39 +7,39 @@ import statsmodels.api as sm
 from IPython.display import display, Image
 
 
-def train_test_split_by_ga(df):
+def train_test_split_by_target(df, target):
     X_train, X_test, y_train, y_test = train_test_split(
-        df.drop("has_dental_ga", axis=1),
-        df.has_dental_ga,
+        df.drop(target, axis=1),
+        df[target],
         test_size=0.33,
-        stratify=df.has_dental_ga,
+        stratify=df[target],
         random_state=1
     )
     df_train = X_train
-    df_train["has_dental_ga"] = y_train
+    df_train[target] = y_train
 
     df_test = X_test
-    df_test["has_dental_ga"] = y_test
+    df_test[target] = y_test
 
     return X_train, X_test
 
 
-def patsify_data(df):
+def patsify_data(df, feature):
 
     if "entity_id" in df.columns:
         df.drop("entity_id", axis=1, inplace=True)
 
-    features = df.drop("has_dental_ga", axis=1).columns
-    patsy_string = "has_dental_ga ~ "
+    features = df.drop(feature, axis=1).columns
+    patsy_string = f"{feature} ~ "
     patsy_string += " + ".join(features)
     y, X = dmatrices(patsy_string, data=df, return_type="dataframe")
 
     return y, X
 
 
-def log_reg_model_of_ga(df):
+def log_reg_model_of_feature(df, feature):
 
-    y, X = patsify_data(df)
+    y, X = patsify_data(df, feature)
 
     mod = sm.Logit(y, X)
     log_reg = mod.fit(maxiter=100)

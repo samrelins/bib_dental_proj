@@ -58,3 +58,68 @@ def return_merged_baseline_ga_df(bib_dir, select_cols=None,
 
     return baseline_ga_data
 
+
+def return_reduced_baseline_df(bib_dir):
+
+    # load baseline / ga data points of interest
+    cols_of_interest = ['entity_id', "BiBPregNumber", 'ben0nobenf', 'edu0fthede',
+                        'edu0mumede', "eth0eth3gp", "fin0manfin",
+                        'hhd0marchb', 'imd_2010_decile_nat', 'job0fthemp',
+                        'job0mumemp', 'mbqlcasep5gp', "mms0mbkbmi", "smk0regsmk"]
+
+    education_outcomes = {1: "<5_gcse", 2: "5_gcse", 3: "A_level",
+                          4: "higher_than_A_level", 5: "other", 6: "dont_know",
+                          7: "foreign_unknown"}
+
+    rename_features = {
+        "ben0nobenf": ("on_benefits", {1: "no",
+                                       2: "yes"}),
+        "edu0fthede": ("fathers_education", education_outcomes),
+        "edu0mumede": ("mothers_education", education_outcomes),
+        "eth0eth3gp": ("mothers_ethnicity", {1:"white_british",
+                                             2: "pakistani",
+                                             3: "other"}),
+        "fin0manfin": ("managing_financially", {1: "living_comfortably",
+                                                2: "doing_alright",
+                                                3: "just_about_getting_by",
+                                                4: "quite_difficult",
+                                                5: "very_difficult",
+                                                6: "no_answer"}),
+        "hhd0marchb": ("married_cohabiting", {1: "married_n_cohabiting",
+                                              2: "married_not_cohabiting",
+                                              3: "not_cohabiting"}),
+        "imd_2010_decile_nat": ("imd_decile", None),
+        "job0fthemp": ("father_employment", {1: "non_manual",
+                                             2: "manual",
+                                             3: "self_employed",
+                                             4: "student",
+                                             5: "unemployed",
+                                             6: "unknown"}),
+        "job0mumemp": ("mother_employment", {1: "currently_employed",
+                                             2: "previously_employed",
+                                             3: "never_employed"}),
+        "mbqlcasep5gp": ("socio_economic_pos", {1: "least_dep_most_edu",
+                                                2: "employed_not_dep",
+                                                3: "employed_dep",
+                                                4: "benefits",
+                                                5: "most_dep"}),
+        "mms0mbkbmi": ("mothers_bmi", None),
+        "smk0regsmk": ("mother_smoked", {1: "yes_over_year_ago",
+                                         2: "yes_within_year",
+                                         3: "yes",
+                                         4: "no"})
+    }
+
+
+    baseline_ga = return_baseline_df(bib_dir, cols_of_interest)
+
+    for feature in rename_features.keys():
+        name, map = rename_features[feature]
+        if map is not None:
+            baseline_ga[name] = baseline_ga[feature].map(map).astype("category")
+        else:
+            baseline_ga[name] = baseline_ga[feature].astype("float")
+        baseline_ga.drop(feature, axis=1, inplace=True)
+
+    return baseline_ga
+
