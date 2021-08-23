@@ -21,16 +21,12 @@ def return_baseline_df(bib_dir, select_cols=None):
 
     # join baseline data with child IDs
     baseline_data.rename({"entity_id": "BiBMotherID"}, axis=1, inplace=True)
-    baseline_data = baseline_data.merge(person_data,
-                                    on=["BiBMotherID", "BiBPregNumber"],
-                                    how="left")
-    baseline_data.drop(["BiBMotherID", "BiBPregNumber"], axis=1, inplace=True)
-    baseline_data.dropna(subset=["entity_id"], inplace=True)
+    output_df = person_data.merge(baseline_data,
+                                  on=["BiBMotherID", "BiBPregNumber"],
+                                  how="left")
+    output_df.drop(["BiBMotherID", "BiBPregNumber"], axis=1, inplace=True)
 
-    if select_cols is not None:
-        baseline_data.dropna(inplace=True)
-
-    return baseline_data
+    return output_df
 
 
 def return_merged_baseline_ga_df(bib_dir, select_cols=None,
@@ -53,13 +49,13 @@ def return_merged_baseline_ga_df(bib_dir, select_cols=None,
 
     baseline_ga_data = baseline_data.merge(ga_data,
                                            on="entity_id",
-                                           how="left")
+                                           how="outer")
     baseline_ga_data["has_dental_ga"] = baseline_ga_data.has_dental_ga.fillna(0)
 
     return baseline_ga_data
 
 
-def return_reduced_baseline_df(bib_dir):
+def return_reduced_baseline_ga_df(bib_dir):
 
     # load baseline / ga data points of interest
     cols_of_interest = ['entity_id', "BiBPregNumber", 'ben0nobenf', 'edu0fthede',
@@ -111,7 +107,9 @@ def return_reduced_baseline_df(bib_dir):
     }
 
 
-    baseline_ga = return_baseline_df(bib_dir, cols_of_interest)
+    baseline_ga = return_merged_baseline_ga_df(bib_dir,
+                                               select_cols=cols_of_interest,
+                                               drop_comp_care_cases = True)
 
     for feature in rename_features.keys():
         name, map = rename_features[feature]

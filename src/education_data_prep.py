@@ -37,27 +37,27 @@ def clean_context_data(df):
     # convert free school meals to binary "gifted" variable
     df["fsm"] = df["edcont_fsm"].apply(
         lambda x: True if x == 2 else False
-    )
+    ).astype("bool")
 
     # convert gifted / talented to binary "gifted" variable
     df["gifted"] = df["edcont_g_t"].apply(
         lambda x: True if x == 2 else False
-    )
+    ).astype("bool")
 
     # convert gender to binary "male" variable
     df["male"] = df["edcont_gender"].apply(
         lambda x: True if x == 2 else False
-    )
+    ).astype("bool")
 
     # convert looked after to binary  variable
     df["looked_after"] = df["edcont_lac"].apply(
         lambda x: True if x == 2 else False
-    )
+    ).astype("bool")
 
     # convert sen to binary "has sen" variable
     df["sen"] = df["edcont_sen"].apply(
         lambda x: False if x == 2 else True
-    )
+    ).astype("bool")
 
     # remove unneeded cols
     drop_cols = ['has_edrecs_context', 'edcont_actermbirth',
@@ -76,11 +76,6 @@ def clean_phonics_data(df):
 
     df = df.copy()
 
-    # create "other" category in which to lump all pass / non-pass results incl. nas
-    df["phonics_grade1"] = df.phonics_grade1.apply(
-        lambda x: "expected" if x == 1 else "below_or_missing"
-    ).astype("category")
-
     # fill mark nas with zero
     df.phonics_mark1.fillna(0, inplace=True)
 
@@ -91,11 +86,12 @@ def clean_phonics_data(df):
 
     # drop columns that aren't of interest
     # all test 2s are missing a significant number of obs
+    # Phonics Grade correlates almost perfectly with "meets phonics standard"
     drop_cols = ['has_edrecs_y1_phonics', 'has_edphon', 'phonics_acyrtested1',
-                 'phonics_acyrtested2', 'phonics_grade2', 'phonics_mark2',
-                 'phonics_standard1', 'phonics_standard2',
-                 'phonics_testestablishment1', 'phonics_testestablishment2',
-                 'phonics_yeartested1', 'phonics_yeartested2']
+                 'phonics_acyrtested2', 'phonics_grade1', 'phonics_grade2',
+                 'phonics_mark2', 'phonics_standard1', 'phonics_standard2',
+                 'phonics_testestablishment2', 'phonics_yeartested1',
+                 'phonics_yeartested2']
     df.drop(drop_cols, axis=1, inplace=True)
 
     return df
@@ -221,7 +217,7 @@ def rename_context_cols(df):
     return df
 
 
-def return_merged_edrecs_df(bib_dir):
+def return_merged_edrecs_df(bib_dir, include_schools=False):
     # load eyfsp data
     eyfsp_path = os.path.join(bib_dir, "education/eyfsp_post_2013/data.csv")
     eyfsp_data = pd.read_csv(eyfsp_path)
@@ -236,6 +232,8 @@ def return_merged_edrecs_df(bib_dir):
     phonics_path = os.path.join(bib_dir, "education/y1_phonics/data.csv")
     phonics_data = pd.read_csv(phonics_path)
     phonics_data = phonics_data.pipe(clean_phonics_data)
+    if not include_schools:
+        phonics_data.drop("phonics_testestablishment1", axis=1, inplace=True)
 
     # load ks1 data
     ks1_data = clean_and_merge_ks1_data(bib_dir)
