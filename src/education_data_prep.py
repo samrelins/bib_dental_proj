@@ -2,8 +2,15 @@
 import pandas as pd
 import numpy as np
 import os
+from pandas.api.types import CategoricalDtype
 from ga_data_prep import *
 from sklearn.model_selection import train_test_split
+
+
+results_dtype = CategoricalDtype(categories=["expected",
+                                             "below_or_missing",
+                                             "exceeding"],
+                                 ordered=False)
 
 
 def clean_context_data(df):
@@ -146,10 +153,10 @@ def clean_and_merge_ks1_data(bib_dir):
     for subject in ["ks1_maths", "ks1_reading", "ks1_writing"]:
         ks1_pre_2016_data[subject] = (ks1_pre_2016_data[subject]
                                       .map(pre_2016_scores_map)
-                                      .astype("category"))
+                                      .astype(results_dtype))
         ks1_post_2016_data[subject] = (ks1_post_2016_data[subject]
                                        .map(post_2016_scores_map)
-                                       .astype("category"))
+                                       .astype(results_dtype))
 
     # append pre / post dataframes
     ks1_data = ks1_pre_2016_data.append(ks1_post_2016_data)
@@ -182,7 +189,7 @@ def clean_eyfsp_data(df):
             continue
         df[col] = (df[col]
                    .map(eyfsp_codes)
-                   .astype("category"))
+                   .astype(results_dtype))
 
     rename_cols = {
         'eyfsp_post2013_com_elg01': "com_listening_attention",
