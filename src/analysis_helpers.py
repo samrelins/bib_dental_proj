@@ -235,3 +235,19 @@ def plot_roc_curves(plot_data, title=None):
     )
     fig_image = fig.to_image(format="png")
     display(Image(fig_image))
+
+
+def report_ors_from_sm_results(results):
+    params = np.exp(results.params)
+    params.name = "OR"
+
+    cis = np.exp(results.conf_int())
+    cis.columns = ["0.025 CI", "0.975 CI"]
+
+    pvalues = results.pvalues
+    pvalues.name = "p-value"
+
+    stats = (cis.join(params)
+             .join(pvalues))
+    stats = stats[["OR", "0.025 CI", "0.975 CI", "p-value"]]
+    return stats
