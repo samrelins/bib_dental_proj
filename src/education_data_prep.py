@@ -7,9 +7,9 @@ from ga_data_prep import *
 from sklearn.model_selection import train_test_split
 
 
-results_dtype = CategoricalDtype(categories=["expected",
-                                             "below_or_missing",
-                                             "exceeding"],
+results_dtype = CategoricalDtype(categories=["Expected",
+                                             "Below/Missing",
+                                             "Exceeding"],
                                  ordered=False)
 
 
@@ -20,9 +20,9 @@ def clean_context_data(df):
     # convert missing eal to "unknown", then name categories
     df["edcont_eal"] = df.edcont_eal.fillna(2)
     eal_codes = {
-        1: "no",
-        2: "unknown",
-        3: "yes"
+        1: "No",
+        2: "Unknown",
+        3: "Yes"
     }
     df["edcont_eal"] = (df.edcont_eal
                         .map(eal_codes)
@@ -33,9 +33,9 @@ def clean_context_data(df):
         lambda x: x if x in [3, 8] else 10
     )
     ethnic_origin_codes = {
-        3: "pakistani",
-        8: "white_british",
-        10: "other",
+        3: "Pakistani",
+        8: "White British",
+        10: "Other",
     }
     df["edcont_ethnic_origin"] = (df.edcont_ethnic_origin
                                   .map(ethnic_origin_codes)
@@ -43,28 +43,28 @@ def clean_context_data(df):
 
     # convert free school meals to binary "gifted" variable
     df["fsm"] = df["edcont_fsm"].apply(
-        lambda x: True if x == 2 else False
-    ).astype("bool")
+        lambda x: "Yes" if x == 2 else "No"
+    ).astype("category")
 
     # convert gifted / talented to binary "gifted" variable
     df["gifted"] = df["edcont_g_t"].apply(
-        lambda x: True if x == 2 else False
-    ).astype("bool")
+        lambda x: "Yes" if x == 2 else "No"
+    ).astype("category")
 
     # convert gender to binary "male" variable
     df["male"] = df["edcont_gender"].apply(
-        lambda x: True if x == 2 else False
-    ).astype("bool")
+        lambda x: "Yes" if x == 2 else "No"
+    ).astype("category")
 
     # convert looked after to binary  variable
     df["looked_after"] = df["edcont_lac"].apply(
-        lambda x: True if x == 2 else False
-    ).astype("bool")
+        lambda x: "Yes" if x == 2 else "No"
+    ).astype("category")
 
     # convert sen to binary "has sen" variable
     df["sen"] = df["edcont_sen"].apply(
-        lambda x: False if x == 2 else True
-    ).astype("bool")
+        lambda x: "No" if x == 2 else "Yes"
+    ).astype("category")
 
     # remove unneeded cols
     drop_cols = ['has_edrecs_context', 'edcont_actermbirth',
@@ -88,8 +88,8 @@ def clean_phonics_data(df):
 
     # convert phonics standard to binary variable
     df["meets_phonics_standard"] = df.phonics_standard1.apply(
-        lambda x: True if x == 2 else False
-    )
+        lambda x: "Yes" if x == 2 else "No"
+    ).astype("category")
 
     # drop columns that aren't of interest
     # all test 2s are missing a significant number of obs
@@ -134,21 +134,21 @@ def clean_and_merge_ks1_data(bib_dir):
 
     # convert grades to approximate equivalents between pre / post 2016 tests
     pre_2016_scores_map = {
-        1: "below_or_missing",
-        2: "below_or_missing",
-        3: "expected",
-        4: "expected",
-        5: "exceeding",
-        6:"below_or_missing"
+        1: "Below/Missing",
+        2: "Below/Missing",
+        3: "Expected",
+        4: "Expected",
+        5: "Exceeding",
+        6: "Below/Missing"
     }
     post_2016_scores_map = {
-        1: "below_or_missing",
-        2: "below_or_missing",
-        3: "below_or_missing",
-        4: "expected",
-        5: "exceeding",
-        6:"below_or_missing",
-        7:"below_or_missing"
+        1: "Below/Missing",
+        2: "Below/Missing",
+        3: "Below/Missing",
+        4: "Expected",
+        5: "Exceeding",
+        6: "Below/Missing",
+        7: "Below/Missing"
     }
     for subject in ["ks1_maths", "ks1_reading", "ks1_writing"]:
         ks1_pre_2016_data[subject] = (ks1_pre_2016_data[subject]
@@ -179,10 +179,10 @@ def clean_eyfsp_data(df):
 
     # convert eyfsp categories
     eyfsp_codes = {
-        1: "below_or_missing",
-        2: "expected",
-        3: "exceeding",
-        4: "below_or_missing",
+        1: "Below/Missing",
+        2: "Expected",
+        3: "Exceeding",
+        4: "Below/Missing",
     }
     for col in df.columns:
         if col == "entity_id":

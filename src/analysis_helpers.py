@@ -211,7 +211,8 @@ def return_cramersv_heatmap(dataf, skip_cols, title=""):
     cramersv_heatmap = px.imshow(platoon_cramers_v)
     cramersv_heatmap.update_layout(width=1000,
                                    height=1000,
-                                   title=dict(text=title, x=0.5))
+                                   title=dict(text=title, x=0.5, y=0.97),
+                                   font=dict(size=15))
     return cramersv_heatmap
 
 
@@ -237,17 +238,23 @@ def plot_roc_curves(plot_data, title=None):
     display(Image(fig_image))
 
 
+
 def report_ors_from_sm_results(results):
-    params = np.exp(results.params)
-    params.name = "OR"
+    ors = np.exp(results.params)
+    ors.name = "OR"
 
     cis = np.exp(results.conf_int())
-    cis.columns = ["0.025 CI", "0.975 CI"]
+    cis.columns = ["low_CI", "high_CI"]
 
     pvalues = results.pvalues
     pvalues.name = "p-value"
 
-    stats = (cis.join(params)
-             .join(pvalues))
-    stats = stats[["OR", "0.025 CI", "0.975 CI", "p-value"]]
+    stats = (cis.join(ors)
+             .join(pvalues)
+             .round(4)
+             .astype("string"))
+
+    stats["OR"] = stats.OR + " (" + stats.low_CI + ", " + stats.high_CI + ")"
+    stats = stats[["OR", "p-value"]]
+
     return stats
