@@ -258,3 +258,4 @@ def report_ors_from_sm_results(results):
     stats = stats[["OR", "p-value"]]
 
     return stats
+
